@@ -48,20 +48,21 @@ defmodule ExWebRTC.SDPUtils do
         mid
       end)
 
-    case groups do
-      [%ExSDP.Attribute.Group{semantics: "BUNDLE", mids: group_mids}] ->
+    case find_group(groups, "BUNDLE") do
+      %ExSDP.Attribute.Group{semantics: "BUNDLE", mids: group_mids} ->
         case {mline_mids -- group_mids, group_mids -- mline_mids} do
           {[], []} -> :ok
           {_, []} -> {:error, :non_exhaustive_bundle_group}
           _other -> {:error, :invalid_bundle_group}
         end
 
-      [] ->
+      nil ->
         {:error, :missing_bundle_group}
-
-      other when is_list(other) ->
-        {:error, :multiple_bundle_groups}
     end
+  end
+
+  defp find_group(groups, to_find) do
+    Enum.find(groups, nil, fn %ExSDP.Attribute.Group{semantics: name} -> name == to_find end)
   end
 
   @spec ensure_rtcp_mux(ExSDP.t()) :: :ok | {:error, :missing_rtcp_mux}
