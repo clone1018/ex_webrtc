@@ -3,7 +3,7 @@ defmodule ExWebRTC.BrowserSDPTest do
 
   alias ExWebRTC.{MediaStreamTrack, PeerConnection, RTPTransceiver, SessionDescription}
 
-  for browser <- ["chromium", "firefox"] do
+  for browser <- ["obs", "chromium", "firefox"] do
     test "#{browser} SDP offer" do
       {:ok, pc} = PeerConnection.start_link()
 
@@ -14,14 +14,28 @@ defmodule ExWebRTC.BrowserSDPTest do
 
       :ok = PeerConnection.set_remote_description(pc, offer)
 
-      [
-        %RTPTransceiver{direction: :recvonly, kind: :audio},
-        %RTPTransceiver{direction: :recvonly, kind: :video}
-      ] = PeerConnection.get_transceivers(pc)
+      assert [
+               %RTPTransceiver{direction: :recvonly, kind: :audio},
+               %RTPTransceiver{direction: :recvonly, kind: :video}
+             ] = PeerConnection.get_transceivers(pc)
 
       assert_receive {:ex_webrtc, ^pc, {:track, %MediaStreamTrack{kind: :audio}}}
       assert_receive {:ex_webrtc, ^pc, {:track, %MediaStreamTrack{kind: :video}}}
       refute_receive {:ex_webrtc, ^pc, {:track, %MediaStreamTrack{}}}
+
+      {:ok, answer} = PeerConnection.create_answer(pc)
+
+      assert [
+               %RTPTransceiver{direction: :recvonly, kind: :audio},
+               %RTPTransceiver{direction: :recvonly, kind: :video}
+             ] = PeerConnection.get_transceivers(pc)
+
+      :ok = ExWebRTC.PeerConnection.set_local_description(pc, answer)
+
+      assert [
+               %RTPTransceiver{direction: :recvonly, kind: :audio},
+               %RTPTransceiver{direction: :recvonly, kind: :video}
+             ] = PeerConnection.get_transceivers(pc)
     end
   end
 end
